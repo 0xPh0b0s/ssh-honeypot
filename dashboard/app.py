@@ -41,7 +41,7 @@ def api_attempts():
     rows = log_db.get_recent_attempts(limit)
     for r in rows:
         r["ts_fmt"] = _fmt_ts(r["ts"])
-        r["success_label"] = "✅ Success" if r["success"] else "❌ Failed"
+        r["success_label"] = "Success" if r["success"] else "Failed"
     return jsonify(rows)
 
 
@@ -70,5 +70,5 @@ def api_commands(session_id: int):
 
 if __name__ == "__main__":
     log_db.init_db()
-    print("📊  Dashboard running at http://127.0.0.1:8080")
+    print("Dashboard running at http://127.0.0.1:8080")
     app.run(host="127.0.0.1", port=8080, debug=False)

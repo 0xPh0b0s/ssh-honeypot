@@ -48,6 +48,19 @@ def init_db():
         """)
 
 
+def clear_db():
+    """Delete all captured data from the database (keeps table structure intact)."""
+    with _lock, _connect() as conn:
+        conn.executescript("""
+            DELETE FROM commands;
+            DELETE FROM sessions;
+            DELETE FROM attempts;
+            -- Reset autoincrement counters
+            DELETE FROM sqlite_sequence WHERE name IN ('commands','sessions','attempts');
+            VACUUM;
+        """)
+
+
 def log_attempt(ip: str, port: int, username: str, password: str, success: bool) -> int:
     """Log a login attempt and return the attempt ID."""
     with _lock, _connect() as conn:
