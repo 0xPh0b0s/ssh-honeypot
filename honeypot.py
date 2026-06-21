@@ -79,10 +79,10 @@ class HoneypotServerInterface(paramiko.ServerInterface):
             self.client_ip, self.client_port, username, password, success
         )
         if success:
-            log.info(f"✅  AUTH SUCCESS  {self.client_ip}:{self.client_port}  user={username!r}  pass={password!r}")
+            log.info(f"[OK]   AUTH SUCCESS  {self.client_ip}:{self.client_port}  user={username!r}  pass={password!r}")
             return paramiko.AUTH_SUCCESSFUL
         else:
-            log.info(f"❌  AUTH FAIL     {self.client_ip}:{self.client_port}  user={username!r}  pass={password!r}")
+            log.info(f"[FAIL] AUTH FAIL     {self.client_ip}:{self.client_port}  user={username!r}  pass={password!r}")
             time.sleep(0.5)   # rate-limit brute-force
             return paramiko.AUTH_FAILED
 
@@ -91,7 +91,7 @@ class HoneypotServerInterface(paramiko.ServerInterface):
         self.attempt_id = log_db.log_attempt(
             self.client_ip, self.client_port, username, f"<pubkey:{key.get_name()}>", False
         )
-        log.info(f"🔑  PUBKEY ATTEMPT {self.client_ip}  user={username!r}")
+        log.info(f"[KEY]  PUBKEY ATTEMPT {self.client_ip}  user={username!r}")
         return paramiko.AUTH_FAILED
 
     def get_allowed_auths(self, username: str) -> str:
@@ -115,7 +115,7 @@ class HoneypotServerInterface(paramiko.ServerInterface):
 
 def handle_client(client_sock: socket.socket, client_addr: tuple):
     client_ip, client_port = client_addr
-    log.info(f"🔌  New connection from {client_ip}:{client_port}")
+    log.info(f"[CONN] New connection from {client_ip}:{client_port}")
 
     transport = None
     try:
@@ -129,7 +129,7 @@ def handle_client(client_sock: socket.socket, client_addr: tuple):
         # Wait for the client to open a channel (30 s timeout)
         channel = transport.accept(30)
         if channel is None:
-            log.info(f"⚠️   No channel opened by {client_ip}:{client_port}")
+            log.info(f"[WARN] No channel opened by {client_ip}:{client_port}")
             return
 
         # Wait for the shell request (10 s timeout)
@@ -137,7 +137,7 @@ def handle_client(client_sock: socket.socket, client_addr: tuple):
 
         # Open logging session
         session_id = log_db.open_session(server_iface.attempt_id)
-        log.info(f"🖥️   Shell session #{session_id} opened for {client_ip}:{client_port}")
+        log.info(f"[SHELL] Shell session #{session_id} opened for {client_ip}:{client_port}")
 
         # Hand off to the fake shell
         shell = FakeShell(
@@ -162,7 +162,7 @@ def handle_client(client_sock: socket.socket, client_addr: tuple):
             time.sleep(0.01)
 
     except Exception as exc:
-        log.warning(f"⚠️   Error handling {client_ip}: {exc}")
+        log.warning(f"[WARN] Error handling {client_ip}: {exc}")
     finally:
         try:
             log_db.close_session(session_id)
@@ -171,7 +171,7 @@ def handle_client(client_sock: socket.socket, client_addr: tuple):
         if transport:
             transport.close()
         client_sock.close()
-        log.info(f"🔌  Connection closed: {client_ip}:{client_port}")
+        log.info(f"[CONN] Connection closed: {client_ip}:{client_port}")
 
 
 # ---------------------------------------------------------------------------
@@ -188,20 +188,20 @@ def main():
     if args.clear_db:
         log_db.init_db()
         log_db.clear_db()
-        log.info("🗑️   Database cleared — all attempts, sessions and commands deleted.")
+        log.info("[INFO] Database cleared -- all attempts, sessions and commands deleted.")
         return
 
     log_db.init_db()
-    log.info(f"🍯  SSH Honeypot starting on {args.host}:{args.port}")
+    log.info(f"[INFO] SSH Honeypot starting on {args.host}:{args.port}")
 
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_sock.bind((args.host, args.port))
     server_sock.listen(100)
 
-    log.info(f"🍯  Listening for connections …")
-    log.info(f"📊  Dashboard: http://127.0.0.1:8080")
-    log.info(f"    (run dashboard/app.py in a separate terminal)")
+    log.info(f"[INFO] Listening for connections ...")
+    log.info(f"[INFO] Dashboard: http://127.0.0.1:8080")
+    log.info(f"[INFO] (run dashboard/app.py in a separate terminal)")
 
     try:
         while True:
