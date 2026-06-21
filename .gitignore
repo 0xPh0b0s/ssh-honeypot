@@ -1,4 +1,3 @@
-# ── Python ────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
@@ -6,31 +5,25 @@ __pycache__/
 *.pyd
 .Python
 
-# ── Virtual environment ───────────────────────────────────────────
 venv/
 .venv/
 env/
 ENV/
 
-# ── Runtime / generated files (NEVER commit these) ────────────────
-# SQLite database — contains captured credentials
 honeypot.db
 *.db
 *.sqlite
 *.sqlite3
 
-# RSA host key — treat like a private key, generate fresh per deploy
 server.key
 *.key
 *.pem
 *.p12
 *.pfx
 
-# ── Logs ─────────────────────────────────────────────────────────
 *.log
 logs/
 
-# ── OS / editor artifacts ─────────────────────────────────────────
 .DS_Store
 .DS_Store?
 ._*
@@ -46,7 +39,6 @@ desktop.ini
 *.swo
 *~
 
-# ── Distribution / build ──────────────────────────────────────────
 dist/
 build/
 *.egg-info/
