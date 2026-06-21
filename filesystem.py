@@ -47,9 +47,6 @@ _MOTD = f"""\
  ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝   ╚═╝   ╚═╝      ╚═════╝    ╚═╝   
 
  Welcome to prod-srv-01 — Authorized access only.
- System administrator note (DO NOT DELETE):
-   Temporary backup credential token: {_ENCODED_PASS}
-   (decode before use)
 
  Last login: Fri Jun  6 09:11:42 2025 from 192.168.1.42
 """

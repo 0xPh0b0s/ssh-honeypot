@@ -34,7 +34,7 @@ Players must:
 | Step | Task | Hint |
 |------|------|------|
 | 1 | Connect via SSH (`ssh -p 2222 admin@<host>`) | Port scan / challenge brief |
-| 2 | Find the SSH password | Base64 token in the SSH banner / `/etc/motd` |
+| 2 | Find the SSH password | Base64 token in the pre-auth SSH banner |
 | 3 | Explore the fake Linux shell | `ls -la`, `cat .bash_history` |
 | 4 | Find the encoded flag file | `/home/admin/.secret` |
 | 5 | Decode it | `base64 -d .secret` |
