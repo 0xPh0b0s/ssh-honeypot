@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🍯 Honeypot Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🍯</span>
+        <span class="logo-text">HoneyPot <span class="logo-sub">CTF Dashboard</span></span>
+      </div>
+      <div class="header-right">
+        <div class="live-dot"></div>
+        <span class="live-label">LIVE</span>
+        <span class="refresh-hint">Auto-refreshes every 5s</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Stats row -->
+  <section class="stats-row" id="statsRow">
+    <div class="stat-card" id="statAttempts">
+      <div class="stat-icon">🎯</div>
+      <div class="stat-body">
+        <div class="stat-value" id="valAttempts">—</div>
+        <div class="stat-label">Total Attempts</div>
+      </div>
+    </div>
+    <div class="stat-card success" id="statSuccess">
+      <div class="stat-icon">✅</div>
+      <div class="stat-body">
+        <div class="stat-value" id="valSuccess">—</div>
+        <div class="stat-label">Successful Logins</div>
+      </div>
+    </div>
+    <div class="stat-card warning" id="statUnique">
+      <div class="stat-icon">🌐</div>
+      <div class="stat-body">
+        <div class="stat-value" id="valUnique">—</div>
+        <div class="stat-label">Unique IPs</div>
+      </div>
+    </div>
+    <div class="stat-card danger" id="statFail">
+      <div class="stat-icon">🚫</div>
+      <div class="stat-body">
+        <div class="stat-value" id="valFail">—</div>
+        <div class="stat-label">Fail Rate</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main grid -->
+  <main class="main-grid">
+
+    <!-- Left: Attempts feed -->
+    <section class="panel panel-wide">
+      <div class="panel-header">
+        <h2>Connection Attempts</h2>
+        <span class="badge" id="attemptCount">0</span>
+      </div>
+      <div class="table-wrapper">
+        <table id="attemptsTable">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>IP</th>
+              <th>Username</th>
+              <th>Password</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody id="attemptsBody">
+            <tr><td colspan="5" class="empty">Waiting for connections…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Right: Sessions + Commands -->
+    <div class="right-column">
+
+      <!-- Sessions -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Shell Sessions</h2>
+          <span class="badge info" id="sessionCount">0</span>
+        </div>
+        <div class="table-wrapper">
+          <table id="sessionsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>IP</th>
+                <th>User</th>
+                <th>Started</th>
+                <th>Duration</th>
+              </tr>
+            </thead>
+            <tbody id="sessionsBody">
+              <tr><td colspan="5" class="empty">No sessions yet…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Command log -->
+      <section class="panel panel-terminal">
+        <div class="panel-header">
+          <h2>Command Log</h2>
+          <span class="terminal-hint">Click a session to filter</span>
+        </div>
+        <div class="terminal" id="terminal">
+          <div class="terminal-placeholder">
+            <span class="blink">█</span> Waiting for shell activity…
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    // -----------------------------------------------------------------------
+    // State
+    // -----------------------------------------------------------------------
+    let selectedSession = null;
+    let knownAttemptIds = new Set();
+    let knownSessionIds = new Set();
+
+    // -----------------------------------------------------------------------
+    // Fetch helpers
+    // -----------------------------------------------------------------------
+    async function fetchJSON(url) {
+      const r = await fetch(url);
+      return r.json();
+    }
+
+    // -----------------------------------------------------------------------
+    // Stats
+    // -----------------------------------------------------------------------
+    async function refreshStats() {
+      const data = await fetchJSON('/api/stats');
+      document.getElementById('valAttempts').textContent = data.total_attempts;
+      document.getElementById('valSuccess').textContent  = data.successful_logins;
+      document.getElementById('valUnique').textContent   = data.unique_ips;
+      document.getElementById('valFail').textContent     = data.fail_rate + '%';
+    }
+
+    // -----------------------------------------------------------------------
+    // Attempts table
+    // -----------------------------------------------------------------------
+    async function refreshAttempts() {
+      const rows = await fetchJSON('/api/attempts?limit=50');
+      const tbody = document.getElementById('attemptsBody');
+      document.getElementById('attemptCount').textContent = rows.length;
+
+      if (!rows.length) return;
+
+      // Check for new rows
+      const newRows = rows.filter(r => !knownAttemptIds.has(r.id));
+      newRows.forEach(r => knownAttemptIds.add(r.id));
+
+      tbody.innerHTML = rows.map(r => `
+        <tr class="${r.success ? 'row-success' : ''} ${newRows.find(n => n.id === r.id) ? 'row-new' : ''}">
+          <td class="mono dim">${r.ts_fmt}</td>
+          <td class="mono">${r.ip}</td>
+          <td class="mono">${escHtml(r.username)}</td>
+          <td class="mono cred">${escHtml(r.password)}</td>
+          <td><span class="badge-result ${r.success ? 'badge-ok' : 'badge-fail'}">${r.success_label}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // -----------------------------------------------------------------------
+    // Sessions table
+    // -----------------------------------------------------------------------
+    async function refreshSessions() {
+      const rows = await fetchJSON('/api/sessions');
+      const tbody = document.getElementById('sessionsBody');
+      document.getElementById('sessionCount').textContent = rows.length;
+
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">No sessions yet…</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = rows.map(r => `
+        <tr class="session-row ${selectedSession === r.id ? 'selected' : ''}" onclick="selectSession(${r.id})">
+          <td class="mono dim">#${r.id}</td>
+          <td class="mono">${r.ip}</td>
+          <td class="mono">${escHtml(r.username)}</td>
+          <td class="mono dim">${r.started_fmt}</td>
+          <td><span class="badge-dur ${r.duration === 'active' ? 'active' : ''}">${r.duration}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // -----------------------------------------------------------------------
+    // Terminal / commands
+    // -----------------------------------------------------------------------
+    async function selectSession(id) {
+      selectedSession = id;
+      await refreshCommands();
+    }
+
+    async function refreshCommands() {
+      if (selectedSession === null) return;
+      const cmds = await fetchJSON(`/api/commands/${selectedSession}`);
+      const terminal = document.getElementById('terminal');
+
+      if (!cmds.length) {
+        terminal.innerHTML = '<div class="terminal-placeholder"><span class="blink">█</span> No commands recorded yet…</div>';
+        return;
+      }
+
+      terminal.innerHTML = cmds.map(c => `
+        <div class="terminal-line">
+          <span class="prompt">admin@prod-srv-01:~$</span>
+          <span class="cmd-text">${escHtml(c.command)}</span>
+          <span class="cmd-time">${c.ts_fmt}</span>
+        </div>
+      `).join('');
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // -----------------------------------------------------------------------
+    // Auto-refresh loop
+    // -----------------------------------------------------------------------
+    async function refresh() {
+      await Promise.all([
+        refreshStats(),
+        refreshAttempts(),
+        refreshSessions(),
+        refreshCommands(),
+      ]);
+    }
+
+    // -----------------------------------------------------------------------
+    // Utils
+    // -----------------------------------------------------------------------
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // -----------------------------------------------------------------------
+    // Boot
+    // -----------------------------------------------------------------------
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>
