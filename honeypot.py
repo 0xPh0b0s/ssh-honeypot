@@ -3,6 +3,7 @@ honeypot.py — Main SSH honeypot server using Paramiko.
 
 Usage:
     python honeypot.py [--port PORT] [--host HOST]
+    python honeypot.py --clear-db
 
 Default: listens on 0.0.0.0:2222
 """
@@ -181,7 +182,14 @@ def main():
     parser = argparse.ArgumentParser(description="CTF SSH Honeypot")
     parser.add_argument("--host", default="0.0.0.0", help="Bind address (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=2222,  help="SSH port (default: 2222)")
+    parser.add_argument("--clear-db", action="store_true", help="Wipe all data from the database and exit")
     args = parser.parse_args()
+
+    if args.clear_db:
+        log_db.init_db()
+        log_db.clear_db()
+        log.info("🗑️   Database cleared — all attempts, sessions and commands deleted.")
+        return
 
     log_db.init_db()
     log.info(f"🍯  SSH Honeypot starting on {args.host}:{args.port}")
