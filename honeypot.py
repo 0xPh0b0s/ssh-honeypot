@@ -23,7 +23,7 @@ import paramiko
 
 import logger as log_db
 from shell import FakeShell
-from filesystem import SSH_PASSWORD
+from filesystem import SSH_PASSWORD, _ENCODED_PASS
 
 # ---------------------------------------------------------------------------
 # Logging setup
@@ -96,6 +96,10 @@ class HoneypotServerInterface(paramiko.ServerInterface):
 
     def get_allowed_auths(self, username: str) -> str:
         return "password,publickey"
+
+    def get_banner(self):
+        banner = f"\r\n=== prod-srv-01 ===\r\nNOTE: Temporary access token (base64): {_ENCODED_PASS}\r\n\r\n"
+        return (banner, "en-US")
 
     def check_channel_pty_request(self, channel, term, width, height, pixelwidth, pixelheight, modes) -> bool:
         return True
